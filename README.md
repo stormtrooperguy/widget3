@@ -321,7 +321,7 @@ Leave `WIFI_STA_STATIC_IP` commented out to use DHCP.
 ## Game flow
 
 1. **Idle.** Hub strip flickers asynchronously between amber, green, red, and off — a late-1970s mainframe panel "thinking" effect. Module rings slowly breathe in dim white, each ring phase-offset by ¼ cycle so they pulse in a rolling wave; every so often a ring spontaneously switches into a magenta orbit excursion (a comet chasing around the ring) for a few revolutions before returning to breathe. Awaiting cartridge.
-2. **Cartridge inserted.** Hub strip flashes green three times, then goes dark. Game begins.
+2. **Cartridge inserted.** Hub strip and all four module rings flash green three times in unison, then go dark. Game begins.
 3. **Round intro.** A blue dot sweeps once across the hub strip — the operator's "go" signal.
 4. **Prompt.** The hub picks a random module (never repeating the immediately previous module within a round). That module's ring fills amber. As the timeout elapses, ring LEDs extinguish one by one until the ring is empty.
    - **Hit** — the player presses *that module's* button before time runs out. Ring goes solid green for ~700 ms, the matching cell on the hub strip lights green, then the ring goes dark.
@@ -332,7 +332,7 @@ Leave `WIFI_STA_STATIC_IP` commented out to use DHCP.
 6. **Repeat** until the scoreboard is full (one cell per `HUB_NUM_LEDS`). With phantom presses enabled in the final round, expect ~`HUB_NUM_LEDS / (1 − pct/100)` total presses to fill it.
 7. **End of round.** Hub strip clears for the round-intro sweep of the next round.
 8. **Repeat for 3 rounds**, with timeouts shrinking 3 s → 2 s → 1 s and inter-prompt pauses shrinking 0.7 s → 0.5 s → 0.3 s.
-9. **Complete.** Hub strip flashes green three times, then goes solid blue. Module rings stay off.
+9. **Complete.** Hub strip and all four module rings flash blue three times in unison, then settle to solid blue everywhere — a unified "victory" tableau across the whole prop.
 10. **Reset.** Pulling the cartridge at any point — including mid-prompt and after completion — instantly returns the prop to idle. Re-inserting starts a fresh game.
 
 ### LED behaviour summary
@@ -340,15 +340,15 @@ Leave `WIFI_STA_STATIC_IP` commented out to use DHCP.
 | Condition | Hub strip | Module rings |
 |---|---|---|
 | Idle (no cartridge) | Per-cell random flicker — amber / green / red / off (1970s panel feel) | All breathe in dim white (rolling wave); occasional magenta orbit excursion on a single ring |
-| Cartridge inserted (startup) | Flash green × 3 then off | All off |
+| Cartridge inserted (startup) | Flash green × 3 then off | Flash green × 3 then off (in unison with hub) |
 | Round intro | Single blue LED sweeps across | All off |
 | Prompt active | Scoreboard (prior results, current cell off) | Active module: depleting amber wedge. Others: off |
 | Prompt hit | Scoreboard updates to green at current cell | Active module solid green for `HIT_HOLD_MS` |
 | Prompt miss | Scoreboard updates to red at current cell | Active module flashes red then settles red |
 | Prompt phantom (final round only) | Scoreboard unchanged | Active module solid cyan for `PHANTOM_FLASH_MS` |
 | Inter-prompt pause | Scoreboard | All off |
-| Game complete (flash) | Flash green × 3 | All off |
-| Game complete (steady) | Solid blue | All off |
+| Game complete (flash) | Flash blue × 3 | Flash blue × 3 (in unison with hub) |
+| Game complete (steady) | Solid blue | Solid blue |
 | Cartridge removed | Returns to idle flicker | All off |
 
 ---

@@ -160,6 +160,10 @@ static void modulesAllOff() {
     for (int i = 0; i < NUM_MODULES; i++) moduleClear(i);
 }
 
+static void modulesAllFill(uint32_t color) {
+    for (int i = 0; i < NUM_MODULES; i++) moduleFill(i, color);
+}
+
 // Weighted random colour for the idle "computer panel" flicker.
 // Heavy on amber for the period-correct vibe; rare red, occasional green,
 // generous off so the strip breathes instead of looking solid.
@@ -430,14 +434,18 @@ static void updateLEDs() {
             break;
 
         case STARTUP_FLASH: {
-            // Three on/off cycles, then transition to ROUND_INTRO
+            // Three on/off cycles in green across hub strip + all module rings,
+            // then transition to ROUND_INTRO with everything dark.
             uint32_t halfCycles = STARTUP_FLASH_COUNT * 2;
             uint32_t phase      = elapsed / STARTUP_FLASH_INTERVAL_MS;
             if (phase >= halfCycles) {
                 hubClear();
+                modulesAllOff();
                 enterState(ROUND_INTRO);
             } else {
-                hubFill((phase % 2 == 0) ? COLOR_GREEN : COLOR_OFF);
+                uint32_t c = (phase % 2 == 0) ? COLOR_GREEN : COLOR_OFF;
+                hubFill(c);
+                modulesAllFill(c);
             }
             break;
         }
@@ -527,18 +535,23 @@ static void updateLEDs() {
         }
 
         case COMPLETE_FLASH: {
+            // Victory flash — blue on/off across hub strip + module rings,
+            // then settle to solid blue everywhere in COMPLETE_STEADY.
             uint32_t halfCycles = COMPLETE_FLASH_COUNT * 2;
             uint32_t phase      = elapsed / COMPLETE_FLASH_INTERVAL_MS;
             if (phase >= halfCycles) {
                 enterState(COMPLETE_STEADY);
             } else {
-                hubFill((phase % 2 == 0) ? COLOR_GREEN : COLOR_OFF);
+                uint32_t c = (phase % 2 == 0) ? COLOR_BLUE : COLOR_OFF;
+                hubFill(c);
+                modulesAllFill(c);
             }
             break;
         }
 
         case COMPLETE_STEADY:
             hubFill(COLOR_BLUE);
+            modulesAllFill(COLOR_BLUE);
             break;
     }
 }
@@ -630,6 +643,7 @@ h1{text-align:center;letter-spacing:6px;font-size:1.3rem;color:#888;margin-botto
 .ring.solidred{border-color:#ff0000;box-shadow:0 0 22px #ff000088}
 .ring.amber  {border-color:#ff6000;box-shadow:0 0 26px #ff6000aa}
 .ring.cyan   {border-color:#00ddff;box-shadow:0 0 22px #00ddffaa}
+.ring.blue   {border-color:#0055ff;box-shadow:0 0 24px #0055ffaa}
 .ring.breathe{border-color:#888;animation:breathe 3s ease-in-out infinite}
 @keyframes breathe{0%,100%{border-color:#333;box-shadow:0 0 6px #44444466}50%{border-color:#cccccc;box-shadow:0 0 22px #cccccccc}}
 #m0.breathe{animation-delay:0s}
@@ -707,10 +721,9 @@ function setStrip(state, results) {
   stopIdleAnim();
   for (let i = 0; i < results.length; i++) {
     const c = stripEl.children[i];
-    if (state === 'complete_steady') {
+    if (state === 'complete_steady' || state === 'complete_flash') {
       c.className = 'cell blue';
-    } else if (state === 'startup_flash' || state === 'complete_flash') {
-      // Flashing — not animated in the mirror, just shown solid green
+    } else if (state === 'startup_flash') {
       c.className = 'cell green';
     } else if (state === 'round_intro') {
       c.className = 'cell';   // sweep not mirrored — strip empty between
@@ -722,15 +735,19 @@ function setStrip(state, results) {
 }
 
 function setModules(state, selected, remainingMs, timeoutMs) {
-  // In idle, all four rings breathe (orbit excursions are not mirrored).
-  const isIdle = (state === 'idle');
+  // Several states paint all four rings the same colour — handle those first.
+  let allRingsClass = null;
+  if (state === 'idle')                                              allRingsClass = 'ring breathe';
+  else if (state === 'startup_flash')                                allRingsClass = 'ring green';
+  else if (state === 'complete_flash' || state === 'complete_steady') allRingsClass = 'ring blue';
+
   for (let i = 0; i < 4; i++) {
     const r = document.getElementById('m' + i);
     const t = document.getElementById('t' + i);
     let cls = 'ring off';
     let countdown = '';
-    if (isIdle) {
-      cls = 'ring breathe';
+    if (allRingsClass) {
+      cls = allRingsClass;
     } else if (i === selected) {
       if (state === 'prompt_active') {
         cls = 'ring amber';
