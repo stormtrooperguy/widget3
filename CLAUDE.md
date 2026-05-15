@@ -9,3 +9,7 @@
 - `platformio.ini` — update the dependencies list if libraries were added or removed
 
 Update the README in the same response as the code change, not as a separate follow-up.
+
+## Git workflow
+
+This is a private, single-developer repo. After every commit, push to the remote (`git push`) without asking for confirmation. There are no shared collaborators to coordinate with, so the usual "ask before pushing" caution does not apply here.
