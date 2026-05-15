@@ -120,6 +120,25 @@ static const uint16_t INTER_PROMPT_PAUSE_MS[NUM_ROUNDS] = { 700, 500, 300 };
 #define IDLE_ANIM_MIN_MS   250
 #define IDLE_ANIM_MAX_MS  1000
 
+// Idle module rings — slow breathe with occasional orbit excursions.
+// While IDLE, each ring defaults to BREATHE: a dim white sine pulse
+// between IDLE_BREATHE_MIN and IDLE_BREATHE_MAX brightness factors,
+// period IDLE_BREATHE_PERIOD_MS. Rings are phase-offset from each
+// other so they roll rather than pulse in sync.
+//
+// On each breath-cycle boundary, every ring independently rolls
+// IDLE_ORBIT_TRIGGER_PCT % to switch into ORBIT mode for
+// IDLE_ORBIT_CYCLES complete revolutions of a magenta comet, then
+// returns to BREATHE. Probability is per-ring per-breath, so visual
+// excursions are sparse and surprising rather than scheduled.
+#define IDLE_BREATHE_PERIOD_MS   3000
+#define IDLE_BREATHE_MIN         0.10f   // floor brightness factor
+#define IDLE_BREATHE_MAX         0.50f   // peak brightness factor
+#define IDLE_ORBIT_STEP_MS       80      // ms per pixel step (16 × 80 = 1280 ms / revolution)
+#define IDLE_ORBIT_CYCLES        3       // complete revolutions per excursion
+#define IDLE_ORBIT_TRIGGER_PCT   8       // % chance per breath cycle to switch to orbit
+#define IDLE_ORBIT_COMET_LENGTH  5       // lit pixels in the trailing comet tail
+
 // ============================================================
 // LED brightness  (0–255)
 // ============================================================
@@ -171,9 +190,11 @@ static const uint16_t INTER_PROMPT_PAUSE_MS[NUM_ROUNDS] = { 700, 500, 300 };
 // ============================================================
 // Colours  (packed 0xRRGGBB)
 // ============================================================
-#define COLOR_OFF    0x000000UL
-#define COLOR_AMBER  0xFF6000UL
-#define COLOR_GREEN  0x00CC00UL
-#define COLOR_RED    0xFF0000UL
-#define COLOR_BLUE   0x0055FFUL
-#define COLOR_CYAN   0x00DDFFUL    // phantom-press acknowledgement
+#define COLOR_OFF     0x000000UL
+#define COLOR_AMBER   0xFF6000UL
+#define COLOR_GREEN   0x00CC00UL
+#define COLOR_RED     0xFF0000UL
+#define COLOR_BLUE    0x0055FFUL
+#define COLOR_CYAN    0x00DDFFUL    // phantom-press acknowledgement
+#define COLOR_WHITE   0xFFFFFFUL    // idle-ring breathe base
+#define COLOR_MAGENTA 0xFF00AAUL    // idle-ring orbit excursion

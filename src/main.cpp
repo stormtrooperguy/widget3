@@ -6,6 +6,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <esp_system.h>
+#include <math.h>
 #include "config.h"
 
 // ============================================================
@@ -42,6 +43,17 @@ struct IdleCell {
     unsigned long nextChangeMs;  // millis() at which this cell repaints
 };
 
+enum IdleRingMode : uint8_t {
+    RING_BREATHE,
+    RING_ORBIT
+};
+
+struct IdleRing {
+    IdleRingMode  mode;            // current animation mode
+    unsigned long modeStartMs;     // millis() when this mode began
+    uint16_t      breathCycleSeen; // count of completed breath cycles, used to roll once per cycle
+};
+
 // ============================================================
 // Globals
 // ============================================================
@@ -66,6 +78,7 @@ int8_t        selectedModule   = -1;    // active module, -1 if none
 int8_t        lastModule       = -1;    // for no-immediate-repeat constraint
 PromptResult  roundResults[PROMPTS_PER_ROUND];
 IdleCell      idleCells[HUB_NUM_LEDS];   // zero-init → all repaint on first IDLE frame
+IdleRing      idleRings[NUM_MODULES];    // zero-init → all start in RING_BREATHE
 
 // ============================================================
 // Utility
@@ -173,6 +186,75 @@ static void updateIdleAnimation(unsigned long now) {
             hubStrip.setPixelColor(i, idleCells[i].color);
         }
         hubStrip.show();
+    }
+}
+
+// Render module ring `i` filled with `baseColor` scaled by `scale` (0..1).
+// Used for the breathe animation; cheap enough to call per loop iteration.
+static void ringSolidScaled(int i, uint32_t baseColor, float scale) {
+    if (scale < 0) scale = 0;
+    if (scale > 1) scale = 1;
+    uint8_t r = (uint8_t)(((baseColor >> 16) & 0xFF) * scale);
+    uint8_t g = (uint8_t)(((baseColor >>  8) & 0xFF) * scale);
+    uint8_t b = (uint8_t)(( baseColor        & 0xFF) * scale);
+    rings[i].fill(rings[i].Color(r, g, b), 0, MODULE_NUM_LEDS);
+    rings[i].show();
+}
+
+// Render module ring `i` as a comet of length `tailLen` at head position
+// `headPos`, in `baseColor`. Each tail pixel is dimmed linearly.
+static void ringComet(int i, int headPos, uint32_t baseColor, uint8_t tailLen) {
+    rings[i].clear();
+    uint8_t br = (baseColor >> 16) & 0xFF;
+    uint8_t bg = (baseColor >>  8) & 0xFF;
+    uint8_t bb =  baseColor        & 0xFF;
+    for (uint8_t t = 0; t < tailLen; t++) {
+        int p = (headPos - t + MODULE_NUM_LEDS) % MODULE_NUM_LEDS;
+        float f = 1.0f - (float)t / tailLen;
+        rings[i].setPixelColor(p, (uint8_t)(br * f), (uint8_t)(bg * f), (uint8_t)(bb * f));
+    }
+    rings[i].show();
+}
+
+static void updateIdleRings(unsigned long now) {
+    const unsigned long orbitDurationMs =
+        (unsigned long)IDLE_ORBIT_STEP_MS * MODULE_NUM_LEDS * IDLE_ORBIT_CYCLES;
+    // Per-ring phase offset so the four rings don't pulse in lockstep.
+    const unsigned long phaseStep = IDLE_BREATHE_PERIOD_MS / NUM_MODULES;
+
+    for (int i = 0; i < NUM_MODULES; i++) {
+        IdleRing &r = idleRings[i];
+
+        if (r.mode == RING_BREATHE) {
+            // Apparent time within this ring's offset breathe cycle
+            unsigned long t = (now + (unsigned long)i * phaseStep) % IDLE_BREATHE_PERIOD_MS;
+            float phase = (float)t / IDLE_BREATHE_PERIOD_MS;
+            float s     = 0.5f + 0.5f * sinf(2.0f * (float)M_PI * phase);
+            float scale = IDLE_BREATHE_MIN + (IDLE_BREATHE_MAX - IDLE_BREATHE_MIN) * s;
+            ringSolidScaled(i, COLOR_WHITE, scale);
+
+            // Detect cycle boundaries — roll once per completed breath whether
+            // to switch into ORBIT mode for a few revolutions.
+            uint16_t cycle = (uint16_t)((now + (unsigned long)i * phaseStep) / IDLE_BREATHE_PERIOD_MS);
+            if (cycle != r.breathCycleSeen) {
+                r.breathCycleSeen = cycle;
+                if ((long)random(100) < (long)IDLE_ORBIT_TRIGGER_PCT) {
+                    r.mode        = RING_ORBIT;
+                    r.modeStartMs = now;
+                }
+            }
+        } else {  // RING_ORBIT
+            unsigned long elapsed = now - r.modeStartMs;
+            if (elapsed >= orbitDurationMs) {
+                r.mode = RING_BREATHE;
+                // Don't immediately re-roll — advance breathCycleSeen so the
+                // next dice roll waits for the next genuine cycle boundary.
+                r.breathCycleSeen = (uint16_t)((now + (unsigned long)i * phaseStep) / IDLE_BREATHE_PERIOD_MS);
+            } else {
+                int pos = (int)((elapsed / IDLE_ORBIT_STEP_MS) % MODULE_NUM_LEDS);
+                ringComet(i, pos, COLOR_MAGENTA, IDLE_ORBIT_COMET_LENGTH);
+            }
+        }
     }
 }
 
@@ -344,7 +426,7 @@ static void updateLEDs() {
 
         case IDLE:
             updateIdleAnimation(now);
-            // modulesAllOff() was called on transition; nothing to redraw.
+            updateIdleRings(now);
             break;
 
         case STARTUP_FLASH: {
@@ -548,6 +630,12 @@ h1{text-align:center;letter-spacing:6px;font-size:1.3rem;color:#888;margin-botto
 .ring.solidred{border-color:#ff0000;box-shadow:0 0 22px #ff000088}
 .ring.amber  {border-color:#ff6000;box-shadow:0 0 26px #ff6000aa}
 .ring.cyan   {border-color:#00ddff;box-shadow:0 0 22px #00ddffaa}
+.ring.breathe{border-color:#888;animation:breathe 3s ease-in-out infinite}
+@keyframes breathe{0%,100%{border-color:#333;box-shadow:0 0 6px #44444466}50%{border-color:#cccccc;box-shadow:0 0 22px #cccccccc}}
+#m0.breathe{animation-delay:0s}
+#m1.breathe{animation-delay:-.75s}
+#m2.breathe{animation-delay:-1.5s}
+#m3.breathe{animation-delay:-2.25s}
 @keyframes flash{0%,49%{opacity:1}50%,100%{opacity:.15}}
 .countdown{font-size:.72rem;color:#ffaa66;letter-spacing:2px;margin-top:6px;min-height:1em}
 </style>
@@ -634,12 +722,16 @@ function setStrip(state, results) {
 }
 
 function setModules(state, selected, remainingMs, timeoutMs) {
+  // In idle, all four rings breathe (orbit excursions are not mirrored).
+  const isIdle = (state === 'idle');
   for (let i = 0; i < 4; i++) {
     const r = document.getElementById('m' + i);
     const t = document.getElementById('t' + i);
     let cls = 'ring off';
     let countdown = '';
-    if (i === selected) {
+    if (isIdle) {
+      cls = 'ring breathe';
+    } else if (i === selected) {
       if (state === 'prompt_active') {
         cls = 'ring amber';
         countdown = (remainingMs / 1000).toFixed(1) + ' s';

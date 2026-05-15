@@ -303,8 +303,14 @@ Leave `WIFI_STA_STATIC_IP` commented out to use DHCP.
 | `MISS_HOLD_MS` | 400 | ms of solid red after the flash sequence |
 | `COMPLETE_FLASH_COUNT` | 3 | Final green flashes on the hub strip |
 | `COMPLETE_FLASH_INTERVAL_MS` | 300 | ms per complete-flash half-cycle |
-| `IDLE_ANIM_MIN_MS` | 250 | Minimum hold time per cell in the idle "computer panel" flicker |
-| `IDLE_ANIM_MAX_MS` | 1000 | Maximum hold time per cell in the idle flicker |
+| `IDLE_ANIM_MIN_MS` | 250 | Minimum hold time per cell in the idle hub-strip flicker |
+| `IDLE_ANIM_MAX_MS` | 1000 | Maximum hold time per cell in the idle hub-strip flicker |
+| `IDLE_BREATHE_PERIOD_MS` | 3000 | Sine-breathe period for idle module rings (rings phase-offset by ¼ period) |
+| `IDLE_BREATHE_MIN` / `IDLE_BREATHE_MAX` | 0.10 / 0.50 | Floor and peak brightness factors for the breathe |
+| `IDLE_ORBIT_TRIGGER_PCT` | 8 | % chance per breath cycle that a ring switches to orbit mode |
+| `IDLE_ORBIT_CYCLES` | 3 | Magenta comet revolutions per orbit excursion before returning to breathe |
+| `IDLE_ORBIT_STEP_MS` | 80 | ms per pixel step in the orbit comet (16 × 80 = 1.28 s / revolution) |
+| `IDLE_ORBIT_COMET_LENGTH` | 5 | Lit pixels in the orbit comet's trailing tail |
 | `LED_BRIGHTNESS` | 150 | 0–255; 150 ≈ 60 % — keeps total current under 3 A |
 | `BUTTON_DEBOUNCE_MS` | 20 | Software debounce window per button |
 | `RFID_POLL_INTERVAL_MS` | 40 | ms between RC522 polls |
@@ -314,7 +320,7 @@ Leave `WIFI_STA_STATIC_IP` commented out to use DHCP.
 
 ## Game flow
 
-1. **Idle.** Hub strip flickers asynchronously between amber, green, red, and off — a late-1970s mainframe panel "thinking" effect. Module rings off. Awaiting cartridge.
+1. **Idle.** Hub strip flickers asynchronously between amber, green, red, and off — a late-1970s mainframe panel "thinking" effect. Module rings slowly breathe in dim white, each ring phase-offset by ¼ cycle so they pulse in a rolling wave; every so often a ring spontaneously switches into a magenta orbit excursion (a comet chasing around the ring) for a few revolutions before returning to breathe. Awaiting cartridge.
 2. **Cartridge inserted.** Hub strip flashes green three times, then goes dark. Game begins.
 3. **Round intro.** A blue dot sweeps once across the hub strip — the operator's "go" signal.
 4. **Prompt.** The hub picks a random module (never repeating the immediately previous module within a round). That module's ring fills amber. As the timeout elapses, ring LEDs extinguish one by one until the ring is empty.
@@ -333,7 +339,7 @@ Leave `WIFI_STA_STATIC_IP` commented out to use DHCP.
 
 | Condition | Hub strip | Module rings |
 |---|---|---|
-| Idle (no cartridge) | Per-cell random flicker — amber / green / red / off (1970s panel feel) | All off |
+| Idle (no cartridge) | Per-cell random flicker — amber / green / red / off (1970s panel feel) | All breathe in dim white (rolling wave); occasional magenta orbit excursion on a single ring |
 | Cartridge inserted (startup) | Flash green × 3 then off | All off |
 | Round intro | Single blue LED sweeps across | All off |
 | Prompt active | Scoreboard (prior results, current cell off) | Active module: depleting amber wedge. Others: off |
@@ -353,7 +359,7 @@ Navigate to the device IP in any browser. The interface is a live mirror only �
 
 - **Header line** — current round (`ROUND 2/3`), current prompt within the round (`PROMPT 7/15`), and the detected cartridge UID.
 - **Hub strip** — `HUB_NUM_LEDS` cells matching the physical strip: green on a hit, red on a miss, blue on completion. When idle, the cells run an independent JS flicker that mirrors the firmware's per-cell amber/green/red/off animation (timing is browser-local, not synced cell-by-cell with the device).
-- **Module rings** — four rings showing the current physical state. The active module's ring is amber with a numeric countdown (`1.2 s`) underneath; settled rings show solid green, solid red, or (during the final round only) cyan for a phantom press.
+- **Module rings** — four rings showing the current physical state. The active module's ring is amber with a numeric countdown (`1.2 s`) underneath; settled rings show solid green, solid red, or (during the final round only) cyan for a phantom press. While idle, all four rings run a slow CSS breathe (the firmware's occasional magenta orbit excursions are not mirrored — the prop is the source of truth for those).
 
 State updates stream over Server-Sent Events at 10 Hz so the countdown and ring transitions feel live.
 
