@@ -5,22 +5,22 @@
 // ============================================================
 // WiFi mode — uncomment exactly one
 // ============================================================
-#define WIFI_MODE_AP       // device creates its own hotspot
-// #define WIFI_MODE_STA   // device joins an existing network
+// #define USE_WIFI_AP    // device creates its own hotspot
+#define USE_WIFI_STA      // device joins an existing network
 
 // AP mode credentials
 #define WIFI_AP_SSID      "SimonSays"
 #define WIFI_AP_PASSWORD  "escape123"
 
-// STA mode credentials (only used when WIFI_MODE_STA is active)
-#define WIFI_STA_SSID        "YourNetworkName"
-#define WIFI_STA_PASSWORD    "YourNetworkPassword"
+// STA mode credentials (only used when USE_WIFI_STA is active)
+#define WIFI_STA_SSID        "Aurora_Eng"
+#define WIFI_STA_PASSWORD    "stardust"
 #define WIFI_STA_TIMEOUT_MS  15000   // ms to wait for connection before giving up
 
 // Static IP for STA mode — comment out to use DHCP instead
-// #define WIFI_STA_STATIC_IP
-#define WIFI_STA_IP       "192.168.1.100"
-#define WIFI_STA_GATEWAY  "192.168.1.1"
+#define WIFI_STA_STATIC_IP
+#define WIFI_STA_IP       "192.168.4.103"
+#define WIFI_STA_GATEWAY  "192.168.4.1"
 #define WIFI_STA_SUBNET   "255.255.255.0"
 #define WIFI_STA_DNS1     "8.8.8.8"
 #define WIFI_STA_DNS2     "8.8.4.4"

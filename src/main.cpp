@@ -842,12 +842,12 @@ void setup() {
     randomSeed(esp_random());
 
     // WiFi — mode selected in config.h
-#if defined(WIFI_MODE_AP)
+#if defined(USE_WIFI_AP)
     WiFi.softAP(WIFI_AP_SSID, WIFI_AP_PASSWORD);
     Serial.printf("AP mode  SSID=%s  IP=%s\n",
                   WIFI_AP_SSID, WiFi.softAPIP().toString().c_str());
 
-#elif defined(WIFI_MODE_STA)
+#elif defined(USE_WIFI_STA)
     WiFi.mode(WIFI_STA);
 #if defined(WIFI_STA_STATIC_IP)
     {
@@ -881,7 +881,7 @@ void setup() {
     }
 
 #else
-#error "Define either WIFI_MODE_AP or WIFI_MODE_STA in config.h"
+#error "Define either USE_WIFI_AP or USE_WIFI_STA in config.h"
 #endif
 
     setupWebServer();
@@ -935,7 +935,7 @@ void loop() {
 
     updateLEDs();
 
-#if defined(WIFI_MODE_STA)
+#if defined(USE_WIFI_STA)
     static unsigned long lastReconnectCheck = 0;
     if (now - lastReconnectCheck >= 5000) {
         lastReconnectCheck = now;

@@ -259,8 +259,8 @@ All user-tunable settings live in `src/config.h`. Edit this file before flashing
 Uncomment exactly one of:
 
 ```c
-#define WIFI_MODE_AP    // ESP32 creates its own hotspot
-// #define WIFI_MODE_STA // ESP32 joins an existing network
+// #define USE_WIFI_AP // ESP32 creates its own hotspot
+#define USE_WIFI_STA   // ESP32 joins an existing network (current setting)
 ```
 
 **AP mode** — connect your phone/laptop to the SSID defined by `WIFI_AP_SSID`. The web interface is at `http://192.168.4.1`.
@@ -273,14 +273,14 @@ Uncomment `WIFI_STA_STATIC_IP` and fill in the four address fields:
 
 ```c
 #define WIFI_STA_STATIC_IP
-#define WIFI_STA_IP       "192.168.1.100"
-#define WIFI_STA_GATEWAY  "192.168.1.1"
+#define WIFI_STA_IP       "192.168.4.103"
+#define WIFI_STA_GATEWAY  "192.168.4.1"
 #define WIFI_STA_SUBNET   "255.255.255.0"
 #define WIFI_STA_DNS1     "8.8.8.8"
 #define WIFI_STA_DNS2     "8.8.4.4"
 ```
 
-Leave `WIFI_STA_STATIC_IP` commented out to use DHCP.
+Current setting: device joins `Aurora_Eng` and claims `192.168.4.103`. Comment out `WIFI_STA_STATIC_IP` to use DHCP instead.
 
 ### Game tunables
 
